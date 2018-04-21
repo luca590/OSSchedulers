@@ -54,7 +54,7 @@ typedef struct tcb
 #endif
 
 
-TTCB processes[NUM_PROCESSES];
+TTCB processes[NUM_PROCESSES]; /* PROCESSES table defined here ********* -------- TTCB -------- */
 
 #if SCHEDULER_TYPE == 0
 
@@ -95,6 +95,29 @@ int findNextPrio(int currPrio)
 }
 int linuxScheduler()
 {
+	// No RT-FIFO and RT Round Robin 👍👍 here we go 😬 😭
+	
+	//Scheduler picks the highest process in active set to run
+	int processLevel = findNextPrio(currPrio);
+
+	TNode* processToRun = activeList[processLevel][0];
+
+	int returnMe = processToRun -> procNum;
+	//When time quantum is expired, it is moved to the expired set. Next highest priority process is picked
+	returnMe -> timeLeft -= 1;
+
+	if (returnMe -> timeLeft < 1) {
+	remove(processToRun);
+	insert(&expiredList[1], processToRun, processToRun -> quantum)
+	}
+
+	//When active set is empty, active and expired pointers are swapped
+	if(totalQuantum(*activeList) == 0) {
+	TNode **tmp = activeList;
+	activeList = expiredList;
+	expiredList = tmp;
+	}
+	
 	/* TODO: IMPLEMENT LINUX STYLE SCHEDULER
 		FUNCTION SHOULD RETURN PROCESS NUMBER OF THE APPROPRIATE RUNNING PROCESS
 		FOR THE CURRENT TIMERTICK.
@@ -110,7 +133,7 @@ int linuxScheduler()
 
 		THIS FUNCTION SHOULD UPDATE THE VARIOUS QUEUES AS IS NEEDED
 		TO IMPLEMENT SCHEDULING */
-	return 0;
+	return returnMe;
 }
 #elif SCHEDULER_TYPE == 1
 
