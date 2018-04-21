@@ -100,16 +100,19 @@ int linuxScheduler()
 	//Scheduler picks the highest process in active set to run
 	int processLevel = findNextPrio(currPrio);
 
-	TNode* processToRun = activeList[processLevel][0];
+	TNode *processToRun = &activeList[processLevel][0];
 
 	int returnMe = processToRun -> procNum;
 	//When time quantum is expired, it is moved to the expired set. Next highest priority process is picked
-	returnMe -> timeLeft -= 1;
+	
+	TTCB* TTCBprocess = &processes[processToRun -> procNum];
 
-	if (returnMe -> timeLeft < 1) {
-	remove(processToRun);
-	insert(&expiredList[1], processToRun, processToRun -> quantum)
+	if (TTCBprocess -> timeLeft < 1) {
+	remove(&processToRun);
+	insert(&expiredList[1], processToRun -> procNum, TTCBprocess -> quantum);
 	}
+
+	TTCBprocess -> timeLeft -= 1;
 
 	//When active set is empty, active and expired pointers are swapped
 	if(totalQuantum(*activeList) == 0) {
