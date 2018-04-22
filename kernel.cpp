@@ -96,50 +96,47 @@ int findNextPrio(int currPrio)
 int linuxScheduler()
 {
 	// No RT-FIFO and RT Round Robin 👍👍 here we go 😬 😭
+	printf("entered Linux scheduler. Timer is: %d\n", timerTick);	
+	int processLevel = currPrio; 
+	/*** Scheduler picks the highest process in active set to run */
+	if(currPrio == 0) processLevel = findNextPrio(currPrio); //this is for initialization 
 	
-
-	/* Scheduler picks the highest process in active set to run */
-
-	int processLevel = findNextPrio(currPrio);	//get next process priority level
-
+	printf("getting process...\n");	
 	TNode *processToRun = &activeList[processLevel][0]; //get the head process in the priority level to run
-
-	int returnMe = processToRun -> procNum;	//get the process number that will be returned
-
-
-	/* When time quantum is expired, it is moved to the expired set. Next highest priority process is picked */
-	
 	TTCB* TTCBprocess = &processes[processToRun -> procNum]; 	//procNum is index into processes. Get TTCB in order to decrement timeLeft
 
 	if (TTCBprocess -> timeLeft < 1) { //if time is up, put the process in expired list
-	int pid = remove(&processToRun);
-	insert(&expiredList[1], pid, processToRun -> quantum);
+	/*** When time quantum is expired, it is moved to the expired set. 
+	 * Next highest priority process is picked */
+
+	printf("\n****** PRE-EMTPTED **** Process level: %d  PID: %d \n", processLevel, pid);
+	int pid = remove(&activeList[processLevel]);
+	printf("tmp0");
+	printf("\nNext process is:  %d, and pid is: %d \n", findNextPrio(currPrio), pid);
+	printf("tmp1");
+	insert(&expiredList[TTCBprocess -> prio], pid, processToRun -> quantum);
+	printf("tmp2");
+
+	processLevel = findNextPrio(currPrio);	//get next process priority level
+	processToRun = &activeList[processLevel][0]; //get the head process in the priority level to run
+	TTCBprocess = &processes[processToRun -> procNum]; 	//procNum is index into processes. Get TTCB in order to decrement timeLeft
+
+	/*** When active set is empty, 
+	 * active and expired pointers are swapped */
+		if(processLevel == -1 || pid == -1) { //if list is empty swap active and expired pointers
+		printf("About to swap lists\n");
+		TNode **tmp = activeList;
+		activeList = expiredList;
+		expiredList = tmp;
+	
+		printf("\n****** SWAPPED LISTS ****\n");
+		}
 	}
 
 	TTCBprocess -> timeLeft -= 1; //subtract 1 from time avaliable
 
-	//When active set is empty, active and expired pointers are swapped
-	if(totalQuantum(*activeList) < 1) { //if list is empty swap active and expired pointers
-	TNode **tmp = activeList;
-	activeList = expiredList;
-	expiredList = tmp;
-	}
-	
-	/* TODO: IMPLEMENT LINUX STYLE SCHEDULER
-		FUNCTION SHOULD RETURN PROCESS NUMBER OF THE APPROPRIATE RUNNING PROCESS
-		FOR THE CURRENT TIMERTICK.
-
-		YOU CAN ACCESS THE timerTick GLOBAL VARIABLE.
-
-		YOU HAVE TWO LISTS OF PROCESSES: queueList1 AND queueList2, AND
-		TWO POINTERS actliveList AND expiredList.
-
-		THERE IS ALSO A PROCESS TABLE CALLED processes WHICH IS SET UP
-		FOR YOU AND CONTAINS PROCESS INFORMATION. SEE THE TTCB STRUCTURE
-		FOR DETAILS.
-
-		THIS FUNCTION SHOULD UPDATE THE VARIOUS QUEUES AS IS NEEDED
-		TO IMPLEMENT SCHEDULING */
+	int returnMe = processToRun -> procNum;	//get the process number that will be returned
+	currPrio = processLevel;	//set the current priority level
 	return returnMe;
 }
 #elif SCHEDULER_TYPE == 1
