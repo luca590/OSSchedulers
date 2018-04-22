@@ -93,15 +93,14 @@ int findNextPrio(int currPrio)
 	return -1; 
 
 }
+
 int linuxScheduler()
 {
 	// No RT-FIFO and RT Round Robin 👍👍 here we go 😬 😭
-	printf("entered Linux scheduler. Timer is: %d\n", timerTick);	
 	int processLevel = currPrio; 
 	/*** Scheduler picks the highest process in active set to run */
 	if(currPrio == 0) processLevel = findNextPrio(currPrio); //this is for initialization 
 	
-	printf("getting process...\n");	
 	TNode *processToRun = &activeList[processLevel][0]; //get the head process in the priority level to run
 	TTCB* TTCBprocess = &processes[processToRun -> procNum]; 	//procNum is index into processes. Get TTCB in order to decrement timeLeft
 
@@ -109,13 +108,9 @@ int linuxScheduler()
 	/*** When time quantum is expired, it is moved to the expired set. 
 	 * Next highest priority process is picked */
 
-	printf("\n****** PRE-EMTPTED **** Process level: %d  PID: %d \n", processLevel, pid);
+	//printf("\n****** PRE-EMTPTED **** Process level: %d \n", processLevel);
 	int pid = remove(&activeList[processLevel]);
-	printf("tmp0");
-	printf("\nNext process is:  %d, and pid is: %d \n", findNextPrio(currPrio), pid);
-	printf("tmp1");
 	insert(&expiredList[TTCBprocess -> prio], pid, processToRun -> quantum);
-	printf("tmp2");
 
 	processLevel = findNextPrio(currPrio);	//get next process priority level
 	processToRun = &activeList[processLevel][0]; //get the head process in the priority level to run
@@ -124,7 +119,6 @@ int linuxScheduler()
 	/*** When active set is empty, 
 	 * active and expired pointers are swapped */
 		if(processLevel == -1 || pid == -1) { //if list is empty swap active and expired pointers
-		printf("About to swap lists\n");
 		TNode **tmp = activeList;
 		activeList = expiredList;
 		expiredList = tmp;
