@@ -97,25 +97,29 @@ int linuxScheduler()
 {
 	// No RT-FIFO and RT Round Robin 👍👍 here we go 😬 😭
 	
-	//Scheduler picks the highest process in active set to run
-	int processLevel = findNextPrio(currPrio);
 
-	TNode *processToRun = &activeList[processLevel][0];
+	/* Scheduler picks the highest process in active set to run */
 
-	int returnMe = processToRun -> procNum;
-	//When time quantum is expired, it is moved to the expired set. Next highest priority process is picked
+	int processLevel = findNextPrio(currPrio);	//get next process priority level
+
+	TNode *processToRun = &activeList[processLevel][0]; //get the head process in the priority level to run
+
+	int returnMe = processToRun -> procNum;	//get the process number that will be returned
+
+
+	/* When time quantum is expired, it is moved to the expired set. Next highest priority process is picked */
 	
-	TTCB* TTCBprocess = &processes[processToRun -> procNum];
+	TTCB* TTCBprocess = &processes[processToRun -> procNum]; 	//procNum is index into processes. Get TTCB in order to decrement timeLeft
 
-	if (TTCBprocess -> timeLeft < 1) {
-	remove(&processToRun);
-	insert(&expiredList[1], processToRun -> procNum, TTCBprocess -> quantum);
+	if (TTCBprocess -> timeLeft < 1) { //if time is up, put the process in expired list
+	int pid = remove(&processToRun);
+	insert(&expiredList[1], pid, processToRun -> quantum);
 	}
 
-	TTCBprocess -> timeLeft -= 1;
+	TTCBprocess -> timeLeft -= 1; //subtract 1 from time avaliable
 
 	//When active set is empty, active and expired pointers are swapped
-	if(totalQuantum(*activeList) == 0) {
+	if(totalQuantum(*activeList) < 1) { //if list is empty swap active and expired pointers
 	TNode **tmp = activeList;
 	activeList = expiredList;
 	expiredList = tmp;
