@@ -142,26 +142,86 @@ int linuxScheduler()
 
 int RMSScheduler()
 {
-	/* TODO: IMPLEMENT RMS  STYLE SCHEDULER
-		FUNCTION SHOULD RETURN PROCESS NUMBER OF THE APPROPRIATE  RUNNING PROCESS.
-		FOR THE CURRENT TIMER TICK.
+	TPrioNode *node = checkReady(blockedQueue, timerTick);
+	while (node != NULL) {
+		prioRemoveNode(&blockedQueue, node);
+		prioInsertNode(&readyQueue, node);
+		node = checkReady(blockedQueue, timerTick);
+	}
 
-		YOU CAN ACCESS THE timerTick GLOBAL VARIABLE.
+	//Check current process
+	if (currProcessNode == NULL && peek(readyQueue) != NULL) {
+		currProcessNode = prioRemove(&readyQueue);
+	}
+	
+	if (currProcessNode != NULL && processes[currProcessNode->procNum].timeLeft == 0) {
+		processes[currProcessNode->procNum].timeLeft = processes[currProcessNode->procNum].c;
+		
+		//check if currProcess missed deadline
+		if (processes[currProcessNode->procNum].deadline < timerTick) {
+			//Update currProcess deadline
+			processes[currProcessNode->procNum].deadline
+				= processes[currProcessNode->procNum].deadline
+				+ processes[currProcessNode->procNum].p;	
 
-		YOU HAVE A VARIABLE CALLED readyQueue WHICH HOLDS A LIST OF PROCESSES
-		READY TO RUN, AND blockedQueue WHICH HOLDS A LIST OF PROCESSES THAT
-		ARE BLOCKED. THERE IS A THIRD VARIABLE currProcessNode WHICH SHOULD
-		POINT TO THE CURRENTLY RUNNING PROCESS DEQUEUED FROM readyQueue,
-		AND A VARIABLE CALLED suspended WHICH IS USED TO STORE THE INFORMATION
-		OF A PRE-EMPTED PROCESS.
+			prioInsertNode(&readyQueue, currProcessNode);
+		}
+		else {
+			//Update currProcess deadline
+			processes[currProcessNode->procNum].deadline
+				= processes[currProcessNode->procNum].deadline
+				+ processes[currProcessNode->procNum].p;
+		
+			prioInsertNode(&blockedQueue, currProcessNode);
+		}
 
-		THERE IS ALSO A PROCESS TABLE CALLED processes WHICH IS SET UP 
-		FOR YOU AND CONTAINS PROCESS INFORMATION. SEE TTCB STRUCTURE
-		FOR MORE INFORMATION.
+		if (suspended == NULL && peek(readyQueue) == NULL) {
+			currProcessNode = NULL;
+		}
+		else if (suspended != NULL && peek(readyQueue) != NULL) {
+			if (peek(readyQueue)->p > suspended->p) {
+				currProcessNode = suspended;
+				suspended = NULL;
+			}
+			else {
+				currProcessNode = prioRemove(&readyQueue);
+			}
+		}
+		else if (suspended == NULL) {
+			currProcessNode = prioRemove(&readyQueue);
+		}
+		else {
+			currProcessNode = suspended;
+			suspended = NULL;
+		}
 
-		THIS FUNCTION SHOULD UPDATE THE VARIOUS QUEUES AS IS NEEDED
-		TO IMPLEMENT SCHEDULING */
-	return 0;
+	}
+
+	//Check if there is pre-empt
+	TPrioNode *preEmpt = peek(readyQueue);
+	if (preEmpt != NULL && currProcessNode != NULL && preEmpt->p < currProcessNode->p) {
+		//Idle
+		suspended = currProcessNode;
+		currProcessNode = prioRemove(&readyQueue);
+		printf("\n--- PRE-EMPTION ---\n\n");
+	}
+
+	//Check suspended process
+	if (suspended != NULL && currProcessNode != NULL && suspended->p < currProcessNode->p) {
+		TPrioNode *swap = currProcessNode;
+		currProcessNode = suspended;
+		suspended = swap;
+	}
+
+	//Execute process
+	if (currProcessNode != NULL) {
+		processes[currProcessNode->procNum].timeLeft--;
+		return currProcessNode->procNum;
+	}
+	//Idle
+	else {
+		return -1;
+	}
 }
 
 #endif
